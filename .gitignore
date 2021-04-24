@@ -1,3 +1,4 @@
 lmdp.egg-info
 .idea
+*.ipynb_check*
 *__pycache__*

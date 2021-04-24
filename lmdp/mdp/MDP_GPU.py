@@ -1,4 +1,3 @@
-from pycuda import compiler, gpuarray
 from collections import defaultdict
 import time
 import math as mth
@@ -6,8 +5,9 @@ from lmdp.mdp.kernels import complex_vi_kernel_code_template as vi_kernel_templa
 import numpy as np
 from copy import deepcopy as cpy
 from collections import Counter
-import pycuda.autoinit
 
+from pycuda import compiler, gpuarray
+import pycuda.autoinit
 
 def init2dict():
     return {}
@@ -353,7 +353,10 @@ class FullMDP(object):
             grid = (MATRIX_SIZE // BLOCK_SIZE, MATRIX_SIZE // BLOCK_SIZE, 1)
 
         # compile the kernel code and get the compiled module
-        mod = compiler.SourceModule(kernel_code)
+        if 'PYCUDA_COMP_CACHE_DIR' in os.environ:
+            mod = comiler.SourceModule(kernel_code, cache_dir = os.getenv('PYCUDA_COMP_CACHE_DIR'))
+        else:
+            mod = compiler.SourceModule(kernel_code)
         matrixmul = mod.get_function("MatrixMulKernel")
 
         # Empty initialize Target Value and Q vectors
@@ -414,7 +417,10 @@ class FullMDP(object):
             grid = (MATRIX_SIZE // BLOCK_SIZE, MATRIX_SIZE // BLOCK_SIZE, 1)
 
         # compile the kernel code and get the compiled module
-        mod = compiler.SourceModule(kernel_code)
+        if 'PYCUDA_COMP_CACHE_DIR' in os.environ:
+            mod = comiler.SourceModule(kernel_code, cache_dir = os.getenv('PYCUDA_COMP_CACHE_DIR'))
+        else:
+            mod = compiler.SourceModule(kernel_code)
         matrixmul = mod.get_function("MatrixMulKernel")
 
         # Empty initialize Target Value and Q vectors
@@ -474,7 +480,10 @@ class FullMDP(object):
             grid = (MATRIX_SIZE // BLOCK_SIZE, MATRIX_SIZE // BLOCK_SIZE, 1)
 
         # compile the kernel code and get the compiled module
-        mod = compiler.SourceModule(kernel_code)
+        if 'PYCUDA_COMP_CACHE_DIR' in os.environ:
+            mod = comiler.SourceModule(kernel_code, cache_dir = os.getenv('PYCUDA_COMP_CACHE_DIR'))
+        else:
+            mod = compiler.SourceModule(kernel_code)
         matrixmul = mod.get_function("MatrixMulKernel")
 
         # Empty initialize Target Value and Q vectors
