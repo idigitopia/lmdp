@@ -5,6 +5,7 @@ from lmdp.mdp.kernels import complex_vi_kernel_code_template as vi_kernel_templa
 import numpy as np
 from copy import deepcopy as cpy
 from collections import Counter
+import os 
 
 from pycuda import compiler, gpuarray
 import pycuda.autoinit
