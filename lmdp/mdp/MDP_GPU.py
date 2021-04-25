@@ -355,7 +355,7 @@ class FullMDP(object):
 
         # compile the kernel code and get the compiled module
         if 'PYCUDA_COMP_CACHE_DIR' in os.environ:
-            mod = comiler.SourceModule(kernel_code, cache_dir = os.getenv('PYCUDA_COMP_CACHE_DIR'))
+            mod = compiler.SourceModule(kernel_code, cache_dir = os.getenv('PYCUDA_COMP_CACHE_DIR'))
         else:
             mod = compiler.SourceModule(kernel_code)
         matrixmul = mod.get_function("MatrixMulKernel")
@@ -419,7 +419,7 @@ class FullMDP(object):
 
         # compile the kernel code and get the compiled module
         if 'PYCUDA_COMP_CACHE_DIR' in os.environ:
-            mod = comiler.SourceModule(kernel_code, cache_dir = os.getenv('PYCUDA_COMP_CACHE_DIR'))
+            mod = compiler.SourceModule(kernel_code, cache_dir = os.getenv('PYCUDA_COMP_CACHE_DIR'))
         else:
             mod = compiler.SourceModule(kernel_code)
         matrixmul = mod.get_function("MatrixMulKernel")
@@ -482,7 +482,7 @@ class FullMDP(object):
 
         # compile the kernel code and get the compiled module
         if 'PYCUDA_COMP_CACHE_DIR' in os.environ:
-            mod = comiler.SourceModule(kernel_code, cache_dir = os.getenv('PYCUDA_COMP_CACHE_DIR'))
+            mod = compiler.SourceModule(kernel_code, cache_dir = os.getenv('PYCUDA_COMP_CACHE_DIR'))
         else:
             mod = compiler.SourceModule(kernel_code)
         matrixmul = mod.get_function("MatrixMulKernel")
