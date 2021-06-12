@@ -32,8 +32,8 @@ def evaluate_on_env(env, policy_func, eps_count=30, verbose=False, render = Fals
 
         done = False
         while not done:
-            eps_rewards.append(0)
-            eps_steps.append(0)
+            step_reward = 0
+            step_count = 0
 
             sum_steps += 1
             policyAction = policy_func(state_c) if np.random.uniform(0,1) > eval_eps else env.action_space.sample()
@@ -41,16 +41,19 @@ def evaluate_on_env(env, policy_func, eps_count=30, verbose=False, render = Fals
             for _ in range(action_repeat):
                 # action_counts[policyAction] += 1
                 state_c, reward, done, info = env.step(np.array(policyAction))
-                sum_rewards += reward
+                step_reward += reward
+                step_count += 1
                 if every_step_hook is not None:
                     every_step_hook(env, state_c)
                 if(render):
                     eps_renders.append(env.render(mode = render_mode))
                     time.sleep(lag)
 
-            eps_rewards[-1] = sum_rewards - (eps_rewards[-2] if len(eps_rewards) > 1 else 0)
-            eps_steps[-1] =  sum_steps - (eps_steps[-2] if len(eps_steps) > 1 else 0)
-
+            sum_rewards += step_reward
+            
+            eps_rewards.append(step_reward)
+            eps_steps.append(step_count)
+            
         all_eps_rewards.append(sum_rewards)
         all_eps_step_counts.append(sum_steps)
         run_info["Run"+str(e)]= {"sum_reward":sum_rewards,

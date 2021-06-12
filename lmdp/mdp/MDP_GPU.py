@@ -1,7 +1,7 @@
 from collections import defaultdict
 import time
 import math as mth
-from lmdp.mdp.kernels import complex_vi_kernel_code_template as vi_kernel_template
+from .kernels import vi_kernel_template
 import numpy as np
 from copy import deepcopy as cpy
 from collections import Counter
@@ -35,6 +35,10 @@ class FullMDP(object):
         """
         :param A: Action Space of the MDP
         """
+
+        # Flag for factored. # ToDo remove this hack
+        self.is_factored = False
+
         has_attributes = lambda v, a_list: all([hasattr(v, a) for a in a_list])
         assert has_attributes(build_args, ["ur", "MAX_S_COUNT", "MAX_NS_COUNT"])
         assert has_attributes(solve_args, ["gamma", "slip_prob", "default_mode"])
@@ -174,12 +178,9 @@ class FullMDP(object):
 
     def update_prob_matrices(self, s_i, a_i):
         # Normalize count Matrix
-        self.tranProbMatrix_cpu[a_i, s_i] = self.tranCountMatrix_cpu[a_i, s_i] / np.sum(
-            self.tranCountMatrix_cpu[a_i, s_i])
-        self.rewardMatrix_cpu[a_i, s_i] = self.rewardCountMatrix_cpu[a_i, s_i] / (
-                self.tranCountMatrix_cpu[a_i, s_i] + 1e-12)
-        self.e_rewardMatrix_cpu[a_i, s_i] = np.array([self.get_rmax_reward_logic(s_i, a_i)] * self.build_args.MAX_NS_COUNT).astype(
-            "float32")
+        self.tranProbMatrix_cpu[a_i, s_i] = self.tranCountMatrix_cpu[a_i, s_i] / (np.sum(self.tranCountMatrix_cpu[a_i, s_i]) + 1e-12)
+        self.rewardMatrix_cpu[a_i, s_i] = self.rewardCountMatrix_cpu[a_i, s_i] / (self.tranCountMatrix_cpu[a_i, s_i] + 1e-12)
+        self.e_rewardMatrix_cpu[a_i, s_i] = np.array([self.get_rmax_reward_logic(s_i, a_i)] * self.build_args.MAX_NS_COUNT).astype("float32")
         # assert len(self.tranProbMatrix_cpu[i][j]) == len(self.tranidxMatrix_cpu[i][j])
 
     def sync_mdp_from_cpu_to_gpu(self, ):
@@ -396,6 +397,8 @@ class FullMDP(object):
         tgt_error_gpu.gpudata.free()
 
     def safe_bellman_backup_step_gpu(self):
+        # print("Old backup operation called")
+
         # Temporary variables
         ACTION_COUNT, ROW_COUNT, COL_COUNT = self.tranProbMatrix_gpu.shape
         MATRIX_SIZE = mth.ceil(mth.sqrt(ROW_COUNT))
