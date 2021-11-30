@@ -8,11 +8,10 @@ class FullMDPFactored(FullMDP):
         :param A: Action Space of the MDP
         """
         super().__init__(A, build_args, solve_args)
-
-        # Flag for factored. # ToDo remove this hack
+        
+        # Flag for factored.
         self.is_factored = True
-        self.tmp_flag = True
-
+        
         # MDP matrices CPU
         m_shape = (len(self.A), self.build_args.MAX_S_COUNT, self.build_args.MAX_NS_COUNT)
         self.costCountMatrix_cpu = np.zeros(m_shape).astype('float32')
@@ -35,6 +34,14 @@ class FullMDPFactored(FullMDP):
         self.s_cD_cpu = np.zeros((self.build_args.MAX_S_COUNT, 1)).astype('float32')  # Cost Vector / Penalty vector.
         self.s_cD_gpu = gpuarray.to_gpu(
             np.zeros((self.build_args.MAX_S_COUNT, 1)).astype('float32'))  # value vector in gpu
+
+    @property
+    def chargeDict(self):
+        return {s: float(self.cD_cpu[i]) for s, i in self.s2i.items()}
+
+    @property
+    def s_chargeDict(self):
+        return {s: float(self.s_cD_cpu[i]) for s, i in self.s2i.items()}
 
     def consume_transition(self, tran):
         """
@@ -107,9 +114,6 @@ class FullMDPFactored(FullMDP):
         self.s_cD_cpu = self.s_cD_gpu.get()
         
     def opt_bellman_backup_step_gpu(self):
-        if self.tmp_flag:
-            print("Updated backup operation called")
-            self.tmp_flag = False
 
         # Temporary variables
         ACTION_COUNT, ROW_COUNT, COL_COUNT = self.tranProbMatrix_gpu.shape
@@ -167,7 +171,7 @@ class FullMDPFactored(FullMDP):
 
         self.gpu_backup_counter += 1
         if (self.gpu_backup_counter + 1) % 25 == 0:
-            # print("checkingggg for epsilng stop")
+            # print("checking for epsilng stop")
             max_error_gpu = gpuarray.max(tgt_error_gpu, stream=None)  # ((value_vector_gpu,new_value_vector_gpu)
             max_error = max_error_gpu.get()
             max_error_gpu.gpudata.free()

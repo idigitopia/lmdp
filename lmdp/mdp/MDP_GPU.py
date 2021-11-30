@@ -36,7 +36,7 @@ class FullMDP(object):
         :param A: Action Space of the MDP
         """
 
-        # Flag for factored. # ToDo remove this hack
+        # Flag for factored.
         self.is_factored = False
 
         has_attributes = lambda v, a_list: all([hasattr(v, a) for a in a_list])
