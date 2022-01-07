@@ -13,7 +13,7 @@ pip install -e .
 ## Reference:
 Please use this bibtex if you would like to cite it:
 ```
-@misc{magym,
+@misc{lmdp,
       author = {Shrestha, Aayam},
       title = {lmdp: A MDP library to build and solve large MDPs very fast!},
       year = {2021},
