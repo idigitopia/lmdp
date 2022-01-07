@@ -136,7 +136,16 @@ class AtariBuffer(object):
 
 # Generic replay buffer for standard gym tasks
 class StandardBuffer(object):
+    """
+    Initializes an array for elements of transitions as per the maximum buffer size. 
+    Keeps track of the crt_size. 
+    Saves the buffer element-wise as numpy array. Fast save and retreival compared to pickle dumps. 
+    """
     def __init__(self, state_shape, action_shape,  buffer_size, device, batch_size = 64):
+        
+        self.state_shape = state_shape
+        self.action_shape = action_shape
+        
         self.batch_size = batch_size
         self.max_size = int(buffer_size)
         self.device = device
@@ -149,6 +158,15 @@ class StandardBuffer(object):
         self.next_state = np.array(self.state)
         self.reward = np.zeros((self.max_size, 1))
         self.not_done = np.zeros((self.max_size, 1))
+    
+    def __len__(self):
+        return self.crt_size
+
+    def __repr__(self):
+        return f"Standard Buffer: \n \
+                Total number of transitions: {len(self)}/{self.max_size} \n \
+                State Store Shape: {self.state.shape} \n \
+                Action Store Shape: {self.action.shape} \n"
 
     def add(self, state, action, next_state, reward, done, episode_done=None, episode_start=None):
         self.state[self.ptr] = state
@@ -197,8 +215,7 @@ class StandardBuffer(object):
 
         print(f"Replay Buffer loaded with {self.crt_size} elements.")
 
-    def __len__(self):
-        return self.crt_size
+
 
     def get_tran_tuples(self):
         batch = self.sample_indices(list(range(0, len(self))))
