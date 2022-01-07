@@ -15,25 +15,3 @@ def input_value():
 #     yield smtp_connection
 #     print("finalizing {}".format(smtp_connection))
 #     smtp_connection.close()
-
-
-
-@pytest.fixture
-def standard_buffer_instance():
-    """
-    get empty buffer of default state shape and action shape.
-    """
-    from lmdp.data.buffer import StandardBuffer
-    import numpy as np 
-    
-    # instantiate StandardBuffer 
-    state_shape = [2,2]
-    action_shape = [4]
-    buffer_size = 1000
-    device =  "cpu"
-    standard_buffer = StandardBuffer(state_shape = state_shape,
-                          action_shape = action_shape,
-                          buffer_size = buffer_size,
-                          device = device)
-
-    return standard_buffer

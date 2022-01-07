@@ -1,7 +1,8 @@
 import pytest
 import numpy as np
- 
-    
+
+
+
 def gen_random_transition(buffer):
     return [np.random.rand(*buffer.state_shape), 
            np.random.rand(*buffer.action_shape), 
@@ -9,9 +10,30 @@ def gen_random_transition(buffer):
            np.random.rand(1)[0],
            bool(np.random.randint(2))]
 
+
+@pytest.fixture
+def standard_buffer_instance():
+    """
+    get empty buffer of default state shape and action shape.
+    """
+    from lmdp.data.buffer import StandardBuffer
+    import numpy as np 
+    
+    # instantiate StandardBuffer 
+    state_shape = [2,2]
+    action_shape = [4]
+    buffer_size = 1000
+    device =  "cpu"
+    standard_buffer = StandardBuffer(state_shape = state_shape,
+                          action_shape = action_shape,
+                          buffer_size = buffer_size,
+                          device = device)
+
+    return standard_buffer
+
+
 @pytest.mark.buffer
 @pytest.mark.standard_buffer
-# @pytest.mark.parametrize("test_input,expected", [("3+5", 8), ("2+4", 6), ("6*9", 54)])
 def test_standard_buffer(standard_buffer_instance):
     buffer = standard_buffer_instance
         
