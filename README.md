@@ -1,4 +1,4 @@
-# ma-gym
+# large - MDP 
 This is a library that implements Markov Decision Processes from dataset accompanied with a MDP solver which uses GPU optimized Value Iteration. 
 
 
