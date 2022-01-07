@@ -1,8 +1,6 @@
 import pytest
 import numpy as np
 
-
-
 def gen_random_transition(buffer):
     return [np.random.rand(*buffer.state_shape), 
            np.random.rand(*buffer.action_shape), 
