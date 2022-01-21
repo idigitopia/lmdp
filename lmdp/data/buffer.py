@@ -168,6 +168,15 @@ class StandardBuffer(object):
                 State Store Shape: {self.state.shape} \n \
                 Action Store Shape: {self.action.shape} \n"
 
+    @property
+    def all_states(self):
+        return self.state[:self.crt_size]
+    
+    @property
+    def all_actions(self):
+        return self.action[:self.crt_size]
+
+
     def add(self, state, action, next_state, reward, done, episode_done=None, episode_start=None):
         self.state[self.ptr] = state
         self.action[self.ptr] = action
