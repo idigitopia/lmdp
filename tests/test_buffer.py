@@ -2,9 +2,9 @@ import pytest
 import numpy as np
 
 def gen_random_transition(buffer):
-    return [np.random.rand(*buffer.state_shape), 
-           np.random.rand(*buffer.action_shape), 
-           np.random.rand(*buffer.state_shape), 
+    return [ np.random.randint(100)* np.random.rand(*buffer.state_shape), 
+            np.random.randint(100) * np.random.rand(*buffer.action_shape), 
+            np.random.randint(100) * np.random.rand(*buffer.state_shape), 
            np.random.rand(1)[0],
            bool(np.random.randint(2))]
 
@@ -32,7 +32,7 @@ def standard_buffer_instance():
 
 @pytest.mark.buffer
 @pytest.mark.standard_buffer
-def test_standard_buffer(standard_buffer_instance):
+def test_standard_buffer_add(standard_buffer_instance):
     buffer = standard_buffer_instance
         
     # fill the buffer
@@ -48,3 +48,39 @@ def test_standard_buffer(standard_buffer_instance):
         assert len(buffer) == buffer.max_size
         
     assert buffer.state_shape == [2,2]
+
+    return buffer
+
+
+@pytest.mark.buffer
+@pytest.mark.standard_buffer
+def test_standard_buffer_normalize(standard_buffer_instance):
+
+    from lmdp.data.buffer import StandardBuffer
+    filled_buffer = test_standard_buffer_add(standard_buffer_instance)
+
+    normed_buffer = StandardBuffer.normalize_buffer(filled_buffer)
+
+    assert np.max(normed_buffer.state) <= 1, np.max(normed_buffer.state)
+    assert np.max(normed_buffer.next_state) <= 2, np.max(normed_buffer.next_state)
+    assert np.max(normed_buffer.action) <= 1, np.max(normed_buffer.action)
+
+    assert normed_buffer.norm_params.state_max_vec is not None
+    assert normed_buffer.norm_params.state_min_vec is not None
+
+    assert normed_buffer.norm_params.state_max_vec is not None
+    assert normed_buffer.norm_params.state_min_vec is not None
+
+
+
+    denormed_buffer = StandardBuffer.inverse_normalize_buffer(filled_buffer)
+
+    assert np.max(denormed_buffer.state) >= 1
+    assert np.max(denormed_buffer.next_state) >= 1
+    assert np.max(denormed_buffer.action) >= 1
+
+    assert denormed_buffer.norm_params.state_max_vec is None
+    assert denormed_buffer.norm_params.state_min_vec is None
+
+    assert denormed_buffer.norm_params.state_max_vec is None
+    assert denormed_buffer.norm_params.state_min_vec is None

@@ -1,7 +1,10 @@
+from collections import namedtuple
+from typing import Tuple
 import numpy as np
 import torch
 import time
 import copy
+from types import SimpleNamespace
 
 def ReplayBuffer(state_dim, is_atari, atari_preprocessing, batch_size, buffer_size, device):
     if is_atari:
@@ -158,6 +161,9 @@ class StandardBuffer(object):
         self.next_state = np.array(self.state)
         self.reward = np.zeros((self.max_size, 1))
         self.not_done = np.zeros((self.max_size, 1))
+
+        # Normalization parameters. 
+        self.norm_params = None # Initialized in normalize method. 
     
     def __len__(self):
         return self.crt_size
@@ -167,6 +173,11 @@ class StandardBuffer(object):
                 Total number of transitions: {len(self)}/{self.max_size} \n \
                 State Store Shape: {self.state.shape} \n \
                 Action Store Shape: {self.action.shape} \n"
+
+    @property
+    def all_states(self):
+        return self.state[:self.crt_size]
+
 
     @property
     def all_states(self):
@@ -186,6 +197,7 @@ class StandardBuffer(object):
 
         self.ptr = (self.ptr + 1) % self.max_size
         self.crt_size = min(self.crt_size + 1, self.max_size)
+
 
     def sample(self, batch_size= None):
         inds = np.random.randint(0, self.crt_size, size=batch_size or self.batch_size)
@@ -236,6 +248,98 @@ class StandardBuffer(object):
                                                                                        batch_r.view((-1,)).numpy(),
                                                                                        batch_d.view((-1,)).numpy())]
         return tran_tuples
+
+    # Normalization Logics
+
+    @staticmethod
+    def _normalize_vector(arr:np.array, max_vec = None, min_vec = None)->Tuple[np.array, np.array, np.array]:
+        
+        # use the given norm parameters if provided , else calculate max and min vectors. 
+        max_vec = np.max(arr, axis = 0) if max_vec is None else max_vec
+        min_vec = np.min(arr, axis = 0) if min_vec is None else min_vec
+
+        # handles max == min cases. prevents overflow and normalizes everythign to 1
+        max_min_same_indices = min_vec == max_vec
+        min_vec[min_vec == max_vec] = np.ones_like(min_vec)[max_min_same_indices]
+
+        # calculate normalized array
+        normalized_array = (arr- min_vec) / (max_vec - min_vec)
+
+        return normalized_array, max_vec, min_vec
+
+
+    @staticmethod
+    def _inverse_normalize_vector(arr:np.array, max_vec, min_vec)->np.array:
+        # calculate normalized array
+        denormalized_array = arr * (max_vec - min_vec) + min_vec
+
+        return denormalized_array
+
+
+    @staticmethod
+    def normalize_buffer(buffer, normalize_state = True, normalize_action = True):
+        """[summary]
+        normalizes each channel of the feature representation, and each pixel for image representation. 
+
+        Args:
+            buffer ([type]): [description]
+            normalize_state (bool, optional): [description]. Defaults to True.
+            normalize_action (bool, optional): [description]. Defaults to True.
+        """
+
+        # Initialize norm params if not initalized already
+        if buffer.norm_params is None: 
+            buffer.norm_params = SimpleNamespace(is_state_normalized = False,  is_action_normalized = False, 
+                                         state_max_vec = None, state_min_vec = None,
+                                         action_max_vec = None, action_min_vec = None)
+
+        if normalize_state:
+            assert not buffer.norm_params.is_state_normalized , "Buffer has already been normalized Once, please inverse Normalize before calling."
+            
+            buffer.state, max_vec, min_vec = StandardBuffer._normalize_vector(buffer.state)
+            buffer.next_state, _, _ = StandardBuffer._normalize_vector(buffer.next_state, max_vec, min_vec)
+            buffer.norm_params.state_max_vec, buffer.norm_params.state_min_vec = max_vec, min_vec
+            buffer.norm_params.is_state_normalized = True
+
+        if normalize_action:
+            assert not buffer.norm_params.is_action_normalized , "Buffer has already been normalized Once, please inverse Normalize before calling."
+
+            buffer.action, max_vec, min_vec = StandardBuffer._normalize_vector(buffer.action)
+            buffer.norm_params.action_max_vec, buffer.norm_params.action_min_vec = max_vec, min_vec
+            buffer.norm_params.is_action_normalized = True
+
+        return buffer
+
+    @staticmethod
+    def inverse_normalize_buffer(buffer, normalize_state = True, normalize_action = True):
+        
+        if buffer.norm_params is None: 
+            buffer.norm_params = SimpleNamespace(is_state_normalized = False,  is_action_normalized = False, 
+                                         state_max_vec = None, state_min_vec = None,
+                                         action_max_vec = None, action_min_vec = None)
+
+        if normalize_state:
+            assert buffer.norm_params.is_state_normalized, "Buffer not Normalized, please normalize buffer before calling inverse normalization."
+            assert buffer.norm_params.state_max_vec is not None , "Norm Params not initialized properly"
+            assert buffer.norm_params.state_min_vec is not None , "Norm Params not initialized properly"
+
+            buffer.state = StandardBuffer._inverse_normalize_vector(buffer.state, buffer.norm_params.state_max_vec, buffer.norm_params.state_min_vec)
+            buffer.next_state = StandardBuffer._inverse_normalize_vector(buffer.next_state, buffer.norm_params.state_max_vec, buffer.norm_params.state_min_vec)
+            
+            buffer.norm_params.is_state_normalized = False
+            buffer.norm_params.state_max_vec, buffer.norm_params.state_min_vec = None, None
+        
+        if normalize_action:
+            assert buffer.norm_params.is_action_normalized, "Buffer not Normalized, please normalize buffer before calling inverse normalization."
+            assert buffer.norm_params.action_max_vec is not None , "Norm Params not initialized properly"
+            assert buffer.norm_params.action_min_vec is not None , "Norm Params not initialized properly"
+
+            buffer.action = StandardBuffer._inverse_normalize_vector(buffer.action, buffer.norm_params.action_max_vec, buffer.norm_params.action_min_vec)
+            
+            buffer.norm_params.is_action_normalized = False
+            buffer.norm_params.action_max_vec, buffer.norm_params.action_min_vec = None, None
+
+        return buffer
 
 
 
