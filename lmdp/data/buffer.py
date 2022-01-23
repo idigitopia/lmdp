@@ -178,10 +178,9 @@ class StandardBuffer(object):
     def all_states(self):
         return self.state[:self.crt_size]
 
-
     @property
-    def all_states(self):
-        return self.state[:self.crt_size]
+    def all_next_states(self):
+        return self.next_state[:self.crt_size]
     
     @property
     def all_actions(self):

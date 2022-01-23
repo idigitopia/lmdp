@@ -72,7 +72,6 @@ def test_standard_buffer_normalize(standard_buffer_instance):
     assert normed_buffer.norm_params.state_min_vec is not None
 
 
-
     denormed_buffer = StandardBuffer.inverse_normalize_buffer(filled_buffer)
 
     assert np.max(denormed_buffer.state) >= 1
