@@ -186,6 +186,14 @@ class StandardBuffer(object):
     def all_actions(self):
         return self.action[:self.crt_size]
 
+    @property
+    def all_not_ep_ends(self):
+        return self.not_done[:self.crt_size]
+
+    @property
+    def all_rewards(self):
+        return self.reward[:self.crt_size]
+
 
     def add(self, state, action, next_state, reward, done, episode_done=None, episode_start=None):
         self.state[self.ptr] = state
@@ -341,72 +349,71 @@ class StandardBuffer(object):
         return buffer
 
 
+    @staticmethod
+    def populate_buffer(buffer, env, policy, episode_count=1,frame_count=None, render= False,  pad_attribute_fxn=None,
+                                verbose=False):
+        """
 
-def gather_data_in_buffer(buffer, env, policy, episode_count=1,frame_count=None, render= False,  pad_attribute_fxn=None,
-                          verbose=False):
-    """
+        :param exp_buffer:
+        :param env:
+        :param episodes:
+        :param render:
+        :param policy:
+        :param frame_count:
+        :param pad_attribute_fxn:
+        :param verbose: Can be None,  True or 2 for maximum verboseness.
+        :param policy_on_states:  if set to true , the policy provided is assumed to be on the state variable of unwrapped env
+        :return:
+        """
+        # experience = obs, action, next_obs, reward, terminal_flag
+        start_time = time.time()
 
-    :param exp_buffer:
-    :param env:
-    :param episodes:
-    :param render:
-    :param policy:
-    :param frame_count:
-    :param pad_attribute_fxn:
-    :param verbose: Can be None,  True or 2 for maximum verboseness.
-    :param policy_on_states:  if set to true , the policy provided is assumed to be on the state variable of unwrapped env
-    :return:
-    """
-    # experience = obs, action, next_obs, reward, terminal_flag
-    start_time = time.time()
+        cum_rewards = 0
+        frame_counter = 0
+        eps_count = 0
+        all_rewards = []
+        for _ in range(episode_count):
+            eps_count += 1
+            episode_timesteps = 0
+            done = False
+            state = env.reset()
+            ep_reward = 0
+            episode_start = True
+            while not done:
+                episode_timesteps += 1
+                if render:
+                    env.render()
 
-    cum_rewards = 0
-    frame_counter = 0
-    eps_count = 0
-    all_rewards = []
-    for _ in range(episode_count):
-        eps_count += 1
-        episode_timesteps = 0
-        done = False
-        state = env.reset()
-        ep_reward = 0
-        episode_start = True
-        while not done:
-            episode_timesteps += 1
-            if render:
-                env.render()
+                action =policy(state)
 
-            action =policy(state)
+                # Perform action and log results
+                next_state, reward, done, info = env.step(action)
+                ep_reward += reward
 
-            # Perform action and log results
-            next_state, reward, done, info = env.step(action)
-            ep_reward += reward
+                # Only consider "done" if episode terminates due to failure condition
+                done_float = float(done) if episode_timesteps < env._max_episode_steps else 0
 
-            # Only consider "done" if episode terminates due to failure condition
-            done_float = float(done) if episode_timesteps < env._max_episode_steps else 0
-
-            # Store data in replay buffer
-            buffer.add(state, action, next_state, reward, done_float, done, episode_start)
-            state = copy.copy(next_state)
-            episode_start = False
+                # Store data in replay buffer
+                buffer.add(state, action, next_state, reward, done_float, done, episode_start)
+                state = copy.copy(next_state)
+                episode_start = False
 
 
-        frame_counter += episode_timesteps
-        all_rewards.append(ep_reward)
+            frame_counter += episode_timesteps
+            all_rewards.append(ep_reward)
 
+            if verbose:
+                print(ep_reward, frame_count)
+
+            if frame_count and frame_counter > frame_count:
+                break
+
+        print('Average Reward of collected trajectories:{}'.format(round(np.mean(all_rewards), 3)))
+
+        info = {"all_rewards":all_rewards}
         if verbose:
-            print(ep_reward, frame_count)
-
-        if frame_count and frame_counter > frame_count:
-            break
-
-    print('Average Reward of collected trajectories:{}'.format(round(np.mean(all_rewards), 3)))
-
-    info = {"all_rewards":all_rewards}
-    if verbose:
-        print("Data Collection Complete in {} Seconds".format(time.time()-start_time))
-    return buffer, info
-
+            print("Data Collection Complete in {} Seconds".format(time.time()-start_time))
+        return buffer, info
 
 
 def get_iter_indexes(last_index, batch_size):

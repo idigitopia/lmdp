@@ -43,6 +43,7 @@ class FullMDPFactored(FullMDP):
     def s_chargeDict(self):
         return {s: float(self.s_cD_cpu[i]) for s, i in self.s2i.items()}
 
+
     def consume_transition(self, tran):
         """
         Adds the transition in the MDP
@@ -58,21 +59,31 @@ class FullMDPFactored(FullMDP):
         s_i, a_i, ns_i = self.s2i[s], self.a2i[a], self.s2i[ns]
 
         # Update MDP with new transition
-        free_slots = np.where(self.tranidxMatrix_cpu[a_i, s_i] == 0)[0]
-        if len(free_slots) >= 1:
-            self.update_count_matrices(s_i, a_i, ns_i, r_sum=r, c_sum=c, count=1, slot=free_slots[0], append=True)
-            self.update_prob_matrices(s_i, a_i)
+        # Have we seen this state action before? 
+        slot_idx = self.get_action_slot(s_i, a_i, ns_i)
+        self.update_count_matrices(s_i, a_i, ns_i, r_sum=r, c_sum = c, count=1, slot=slot_idx)
+        self.update_prob_matrices(s_i, a_i)
 
-    def update_count_matrices(self, s_i, a_i, ns_i, r_sum, c_sum, count, slot, append=False):
-        if append:
-            self.tranCountMatrix_cpu[a_i, s_i, slot] += count
-            self.rewardCountMatrix_cpu[a_i, s_i, slot] += r_sum
-            self.costCountMatrix_cpu[a_i, s_i, slot] += c_sum
-        else:
+    
+    def update_count_matrices(self, s_i, a_i, ns_i, r_sum, c_sum, count, slot, override = False):
+        
+        slot_empty = self.tranCountMatrix_cpu[a_i, s_i, slot] == 0
+        slot_assigned_to_unknown = self.tranidxMatrix_cpu[a_i, s_i, slot] == 0
+
+        if override or slot_empty or slot_assigned_to_unknown:
             self.tranidxMatrix_cpu[a_i, s_i, slot] = ns_i
             self.tranCountMatrix_cpu[a_i, s_i, slot] = count
             self.rewardCountMatrix_cpu[a_i, s_i, slot] = r_sum
             self.costCountMatrix_cpu[a_i, s_i, slot] = c_sum
+
+
+        else:
+            can_be_appended = self.tranidxMatrix_cpu[a_i, s_i, slot] == ns_i
+            assert can_be_appended, "Someting is wrong here, slot already occupied by something else"
+            self.tranCountMatrix_cpu[a_i, s_i, slot] += count
+            self.rewardCountMatrix_cpu[a_i, s_i, slot] += r_sum
+            self.costCountMatrix_cpu[a_i, s_i, slot] += c_sum
+
 
     def update_prob_matrices(self, s_i, a_i):
         # Normalize count Matrix

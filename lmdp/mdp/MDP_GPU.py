@@ -117,6 +117,7 @@ class FullMDP(object):
         # self.refresh_cache_dicts()
 
     def _initialize_end_and_unknown_state(self):
+        self.tranidxMatrix_cpu[:, :, 0] = 0  # [a_idx, s_idx, ns_id_idx] # everything goes to unknown state
         self.tranCountMatrix_cpu[:, :, 0] = 1  # [a_idx, s_idx, ns_id_idx] # everything goes to unknown state
         self.tranProbMatrix_cpu[:, :, 0] = 1  # [a_idx, s_idx, ns_id_idx] # everything goes to unknown state
         self.rewardCountMatrix_cpu[:, :, 0] = self.build_args.ur  # [a_idx, s_idx, ns_id_idx] # everything  has ur rewards
@@ -162,19 +163,49 @@ class FullMDP(object):
         s_i, a_i, ns_i = self.s2i[s], self.a2i[a], self.s2i[ns]
 
         # Update MDP with new transition
-        free_slots = np.where(self.tranidxMatrix_cpu[a_i, s_i] == 0)[0]
-        if len(free_slots) >= 1:
-            self.update_count_matrices(s_i, a_i, ns_i, r_sum=r, count=1, slot=free_slots[0], append=True)
-            self.update_prob_matrices(s_i, a_i)
+        # Have we seen this state action before? 
+        slot_idx = self.get_action_slot(s_i, a_i, ns_i)
+        self.update_count_matrices(s_i, a_i, ns_i, r_sum=r, count=1, slot=slot_idx)
+        self.update_prob_matrices(s_i, a_i)
 
-    def update_count_matrices(self, s_i, a_i, ns_i, r_sum, count, slot, append=False):
-        if append:
-            self.tranCountMatrix_cpu[a_i, s_i, slot] += count
-            self.rewardCountMatrix_cpu[a_i, s_i, slot] += r_sum
+    def get_action_slot(self, s_i, a_i, ns_i):
+        """[summary]
+        For a given state and action, returns a slot for next_state. 
+        Args:
+            s_i ([type]): [description]
+            a_i ([type]): [description]
+            ns_i ([type]): [description]
+        """
+
+        slot_already_assigned = ns_i in self.tranidxMatrix_cpu[a_i, s_i]
+
+        if slot_already_assigned:
+            occupied_slot_idx = np.where(self.tranidxMatrix_cpu[a_i, s_i] == ns_i)[0][0]
+            ret_slot = occupied_slot_idx
         else:
+            free_slots = np.where(self.tranidxMatrix_cpu[a_i, s_i] == 0)[0]
+            next_free_slot_idx = free_slots[0]
+            ret_slot = next_free_slot_idx
+
+        # if s_i, a_i has been already seen return the slot allready assigned. 
+        return ret_slot
+
+    def update_count_matrices(self, s_i, a_i, ns_i, r_sum, c_sum, count, slot, override = False):
+        
+        slot_empty = self.tranCountMatrix_cpu[a_i, s_i, slot] == 0
+
+        if override or slot_empty:
             self.tranidxMatrix_cpu[a_i, s_i, slot] = ns_i
             self.tranCountMatrix_cpu[a_i, s_i, slot] = count
             self.rewardCountMatrix_cpu[a_i, s_i, slot] = r_sum
+            self.costCountMatrix_cpu[a_i, s_i, slot] = c_sum
+
+        else:
+            can_be_appended = self.tranidxMatrix_cpu[a_i, s_i, slot] == ns_i
+            assert can_be_appended, "Someting is wrong here, slot already occupied by something else"
+            self.tranCountMatrix_cpu[a_i, s_i, slot] += count
+            self.rewardCountMatrix_cpu[a_i, s_i, slot] += r_sum
+            self.costCountMatrix_cpu[a_i, s_i, slot] += c_sum
 
     def update_prob_matrices(self, s_i, a_i):
         # Normalize count Matrix
@@ -565,6 +596,11 @@ class FullMDP(object):
     @property
     def s_qvalDict(self):
         return {s: {a: self.s_qD_cpu[i][j] for a, j in self.a2i.items()} for s, i in self.s2i.items()}
+
+    @property
+    def polDict(self):
+        qvalDict = self.qvalDict
+        return {s: max(qvalDict[s], key = qvalDict[s].get) for s, i in self.s2i.items()}
 
     @property
     def qval_distribution(self):
