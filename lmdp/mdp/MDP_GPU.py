@@ -135,6 +135,7 @@ class FullMDP(object):
         self.rewardCountMatrix_cpu[:, 1, 0] = 0  # end state self loop has no rewards
         self.rewardMatrix_cpu[:, 1, 0] = 0  # end state has self loop no rewards
 
+
     def get_free_index(self):
         """Used to assign index to a new state"""
         indx = self.free_i.pop()
@@ -287,8 +288,12 @@ class FullMDP(object):
     def get_state_count(self):
         return len(self.s2i)
 
-    def solve(self, eps=1e-5, mode=None, safe_bkp=False, explr_bkp=False, verbose=True):
-        mode = mode or self.default_mode
+    def solve(self, eps=1e-5, mode=None, safe_bkp=False, explr_bkp=False, verbose=True, reset_error = False):
+
+        if reset_error:
+            self.curr_vi_error = 99999
+            
+        mode = mode or self.solve_args["default_mode"]
 
         st = time.time()
         curr_error = self.curr_vi_error
@@ -306,6 +311,7 @@ class FullMDP(object):
                 curr_error = self.curr_vi_error
         et = time.time()
         if verbose: print("Time takedn to solve", et - st)
+
 
     def __len__(self):
         return np.sum(self.filled_mask)
@@ -600,6 +606,11 @@ class FullMDP(object):
     @property
     def polDict(self):
         qvalDict = self.qvalDict
+        return {s: max(qvalDict[s], key = qvalDict[s].get) for s, i in self.s2i.items()}
+
+    @property
+    def s_polDict(self):
+        qvalDict = self.s_qvalDict
         return {s: max(qvalDict[s], key = qvalDict[s].get) for s, i in self.s2i.items()}
 
     @property

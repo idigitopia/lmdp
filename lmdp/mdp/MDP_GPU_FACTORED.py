@@ -43,6 +43,11 @@ class FullMDPFactored(FullMDP):
     def s_chargeDict(self):
         return {s: float(self.s_cD_cpu[i]) for s, i in self.s2i.items()}
 
+    def update_penalty_beta(self, new_penalty_beta):
+        old_penalty_beta = self.build_args.penalty_beta
+        self.costCountMatrix_cpu = ( new_penalty_beta/old_penalty_beta )* self.costCountMatrix_cpu
+        self.costMatrix_cpu = ( new_penalty_beta/old_penalty_beta )* self.costMatrix_cpu
+        self.build_args.penalty_beta = new_penalty_beta 
 
     def consume_transition(self, tran):
         """

@@ -191,6 +191,10 @@ class StandardBuffer(object):
         return self.not_done[:self.crt_size]
 
     @property
+    def all_ep_ends(self):
+        return 1- self.not_done[:self.crt_size]
+
+    @property
     def all_rewards(self):
         return self.reward[:self.crt_size]
 
