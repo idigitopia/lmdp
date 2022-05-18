@@ -694,3 +694,7 @@ class FullMDP(object):
     @property
     def end_state_state_action_count(self):
         return sum([1 for s in self.tD for a in self.tD[s] if "end_state" in self.tD[s][a]])
+
+    def get_state_info(self,s):
+        return 1
+        
